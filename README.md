@@ -17,7 +17,7 @@
 
 1. **Клонування репозиторію**
    ```bash
-   git clone https://github.com/your_username/Drone_AI.git
+   git clone https://github.com/NoGenryFord/Drone-AI.git
    cd Drone_AI
 
 2. Створення та активація віртуального середовища
