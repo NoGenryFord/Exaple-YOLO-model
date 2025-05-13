@@ -1,6 +1,8 @@
-ЛІЦЕНЗІЙНА УГОДА НА ПРОГРАМНЕ ЗАБЕЗПЕЧЕННЯ
+ЛІЦЕНЗІЙНА УГОДА НА ПРОГРАМНЕ ЗАБЕЗПЕЧЕННЯ / SOFTWARE LICENSE AGREEMENT
 
-Copyright (C) 2025. Всі права захищені.
+Copyright (C) 2025. All rights reserved. / Всі права захищені.
+
+[UKRAINIAN]
 
 1. ВИЗНАЧЕННЯ
    "Програмне забезпечення" означає програмний продукт Drone_AI та супутню документацію.
@@ -26,6 +28,32 @@ Copyright (C) 2025. Всі права захищені.
 6. ЗАСТОСОВНЕ ПРАВО
    Ця угода регулюється законодавством України та Чеської Республіки.
 
-Для отримання додаткової інформації або придбання ліцензії звертайтеся:
+[ENGLISH]
+
+1. DEFINITIONS
+   "Software" means the Drone_AI software product and accompanying documentation.
+   "Licensor" - the copyright owner of the Software.
+   "Licensee" - person or organization that has received the right to use the Software.
+
+2. LICENSE GRANT
+   Licensor grants Licensee a limited, non-exclusive right to use the Software exclusively on officially purchased manufacturer's equipment.
+
+3. RESTRICTIONS
+   Licensee shall NOT:
+   - Copy, modify or distribute the Software
+   - Decompile, disassemble or reverse engineer
+   - Transfer, sell or lease the Software
+   - Remove or modify copyright notices
+
+4. TERM
+   The license is valid until terminated. Licensor may terminate the license if any of these terms are breached.
+
+5. LIABILITY
+   The Software is provided "AS IS" without any warranty. Licensor shall not be liable for any damages related to the use of the Software.
+
+6. GOVERNING LAW
+   This agreement is governed by the laws of Ukraine and the Czech Republic.
+
+For additional information or license purchase, please contact:
 Email: your.contact@example.com
-Телефон: +XX XXX XXX XXXX
+Phone: +XX XXX XXX XXXX
