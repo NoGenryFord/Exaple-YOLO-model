@@ -21,16 +21,19 @@
    cd Drone_AI
 
 2. Створення та активація віртуального середовища
+    ```bash
     python -m venv venv
     .\venv\Scripts\activate  # Для Windows
     source venv/bin/activate  # Для Linux/Mac
 
 3. Встановлення залежностей
+    ```bash
     pip install -r requirements.txt
 
 ## Запуск програми
 
 1. Запуск скрипта
+    ```bash
     python military_test/test001.py
 
 2. Керування
@@ -69,6 +72,7 @@ Drone_AI/
     numpy
 
 Встановіть їх за допомогою:
+    ```bash
     pip install -r [requirements.txt](http://_vscodecontentref_/5)
 
 Примітки
