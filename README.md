@@ -34,7 +34,7 @@
 
 1. Запуск скрипта
     ```bash
-    python military_test/test001.py
+    python src/core/tracker.py
 
 2. Керування
     ESC: Вихід із програми
@@ -52,16 +52,19 @@
 
 Drone_AI/
 │
-├── military_test/
-│   ├── [test001.py](http://_vscodecontentref_/2)          # Основний скрипт
-│   ├── weights/            # Ваги моделі YOLOv8
-│   │   └── model_3_best.pt # Файл ваг моделі
-│   └── test/               # Тестові відео
-│       └── tank5.mp4       # Вхідне відео
+├── src/
+│   ├── core/
+│   │   └── tracker.py        # Основний скрипт
+│   ├── models/
+│   │   └── yolo_model.pt     # Файл ваг моделі
+│   └── data/
+│       └── test_videos/      # Тестові відео
+│           └── sample.mp4    # Вхідне відео
 │
-├── venv/                   # Віртуальне середовище (ігнорується Git)
-├── [requirements.txt](http://_vscodecontentref_/3)        # Список залежностей
-└── [README.md](http://_vscodecontentref_/4)               # Інструкція
+├── venv/                     # Віртуальне середовище
+├── requirements.txt          # Список залежностей
+├── LICENSE                   # Ліцензія
+└── README.md                 # Інструкція
 
 ## Залежності
 
