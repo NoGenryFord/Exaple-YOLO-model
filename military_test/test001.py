@@ -6,12 +6,10 @@ import numpy as np
 
 # Модель і трекер
 model = YOLO('military_test/weights/model_3_best.pt')  # Завантаження моделі YOLOv8
-model.conf = 0.4  # Впевненість детектора
-# Задаємо параметри трекера
-tracker = DeepSort(max_age=30, n_init=3)  # Збільшено max_age для кращого супроводу
+model.conf = 0.9  # Впевненість детектора
 
 # Вхідне відео
-video_path = 'military_test/test/tank5.mp4'
+video_path = 'military_test/test/tank5.mp4'  # Шлях до відео
 VIDEO_LIFE = 0 #Use for life_translation tracking (camera)
 video = cv.VideoCapture(video_path)
 # Перевірка відкриття відео
@@ -92,46 +90,33 @@ while True:
         obj_id = hash((x1, y1, x2, y2))  # Унікальний ID на основі координат
         results.append([[x1, y1, x2, y2], conf, obj_id])
 
-    # Оновлення трекера
-    tracks = tracker.update_tracks(results, frame=frame)
-
     # Відображення треків
-    for track in tracks:
-        if not track.is_confirmed():
-            continue
-        track_id = track.track_id
-        x1, y1, x2, y2 = map(int, track.to_tlbr())
-        color = (0, 255, 0) if track_id != selected_track_id else (242, 78, 43)
+    color = (0, 255, 0)  # Колір треку
         # Зменшення розміру прямокутника для відображення
-        box_width = x2 - x1
-        box_height = y2 - y1
-        shrink_factor = 0.7  # Фактор зменшення
-        new_width = int(box_width * shrink_factor)
-        new_height = int(box_height * shrink_factor)
-        # Обчислення центру прямокутника
-        x_center = x1 + box_width // 2
-        y_center = y1 + box_height // 2
-        x1_new = x_center - new_width // 2
-        y1_new = y_center + box_height // 2
-        x2_new = x_center + new_width // 2
-        y2_new = y_center - new_height // 2
-        
-        # Відображення треків
-        color = (0, 255, 0) if track_id != selected_track_id else (242, 78, 43)
-        cv.rectangle(frame, (x1_new, y1_new), (x2_new, y2_new), color, 2)
-        
-        # Відображення центру треку
-        cv.circle(frame, (x_center, y_center), 5, (0,0,255), -1)  # Відображення центру треку
+    box_width = x2 - x1
+    box_height = y2 - y1
+    shrink_factor = 0.7  # Фактор зменшення
+    new_width = int(box_width * shrink_factor)
+    new_height = int(box_height * shrink_factor)
+    # Обчислення центру прямокутника
+    x_center = x1 + box_width // 2
+    y_center = y1 + box_height // 2
 
-        # Відображення ID треку
-        cv.putText(frame, "Target", (x1_new, y1_new - 10),
-                   cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-        # Додано відображення впевненості
-        #conf = track.get_det_conf()  # Отримуємо впевненість трекера
-        #if conf is not None:
-           # cv.putText(frame, f"ID: {track_id} ({conf:.2f})", (x1, y1 - 10),
-                       #cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+    x1_new = x_center - new_width // 2
+    y1_new = y_center + box_height // 2
+    x2_new = x_center + new_width // 2
+    y2_new = y_center - new_height // 2
+        
+    # Відображення треків
+    cv.rectangle(frame, (x1_new, y1_new), (x2_new, y2_new), color, 2)
+        
+    # Відображення центру треку
+    cv.circle(frame, (x_center, y_center), 2, (0,0,255), -1)  # Відображення центру треку
 
+    # Відображення ID треку
+    cv.putText(frame, "Target", (x1_new, y1_new - 10),
+                cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        
     # Вибраний об'єкт
     if selected_track_id is not None:
         cv.putText(frame, f"Selected: {selected_track_id}",
