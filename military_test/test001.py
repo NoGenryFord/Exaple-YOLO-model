@@ -2,14 +2,23 @@ from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
 import cv2 as cv
 import numpy as np
+import time
+import torch
+# Перевірка наявності GPU
 
+    
+
+
+# OpenCV performance settings
+cv.setUseOptimized(True)  # Використання оптимізованих функцій OpenCV
+cv.setNumThreads(4)  # Кількість потоків для OpenCV
 
 # Модель і трекер
 model = YOLO('military_test/weights/model_3_best.pt')  # Завантаження моделі YOLOv8
-model.conf = 0.9  # Впевненість детектора
+model.conf = 0.8  # Впевненість детектора
 
 # Вхідне відео
-video_path = 'military_test/test/tank5.mp4'  # Шлях до відео
+video_path = 'military_test/test/apc1.mp4'  # Шлях до відео
 VIDEO_LIFE = 0 #Use for life_translation tracking (camera)
 video = cv.VideoCapture(video_path)
 # Перевірка відкриття відео
@@ -18,27 +27,20 @@ if not video.isOpened():
     exit()
 
 # Змінні для трекінгу
-selected_track_id = None
 tracks = []  # Глобальна змінна для треків
 
-# Функція вибору об'єкта
-def select_object(event, x, y, flags, param):
-    global selected_track_id
-    if event == cv.EVENT_LBUTTONDOWN:
-        for track in tracks:
-            x1, y1, x2, y2 = track.to_tlbr()
-            if x1 < x < x2 and y1 < y < y2:
-                selected_track_id = "Target"  # Вибрано об'єкт
-                print("Вибрано об'єкт: Target")
-                break
 
 # Явно створюємо вікно і додаємо callback
 cv.namedWindow('Frame')
-cv.setMouseCallback('Frame', select_object)
 
+# Постійні змінні
 # Стандартизований розмір кадру
-STANDARD_WIDTH = 800
-STANDARD_HEIGHT = 600
+STANDARD_WIDTH = 640
+STANDARD_HEIGHT = 480
+
+
+MAX_FPS = 30 # Максимальна частота кадрів
+YOLO_SKIP_FRAMES = 3 # Кількість пропущених кадрів для YOLO
 
 # Функція для зміни розміру кадру
 def resize_frame(frame, width=STANDARD_WIDTH, height=STANDARD_HEIGHT):
@@ -51,9 +53,16 @@ def convert_to_gray(frame):
 
 is_gray_mode = False # Змінна для перевірки кольорового простору
 
+# Змінні для частоти кадрів
+frame_start_time = time.time() # Час початку кадру
+frame_count = 0  # Ініціалізація лічильника кадрів
+fps = 0  # Ініціалізація змінної для FPS
+last_time = time.time()  # Ініціалізація часу для підрахунку FPS
 
 # Основний цикл
 while True:
+
+    start_time = time.time() # Час початку кадру
     # Читання кадру з відео
     ret, frame = video.read()
 
@@ -68,6 +77,8 @@ while True:
                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         cv.imshow('Frame', frame)
 
+    frame_count += 1 # Лічильник кадрів
+
     # Зміна розміру кадру
     frame = resize_frame(frame)
 
@@ -80,47 +91,47 @@ while True:
     frame_width = frame.shape[1]
     frame_height = frame.shape[0]
     
+    # Відображення розміру кадру
+    current_time = time.time() # Час поточного кадру
+    if current_time - last_time >= 1.0:
+        fps = frame_count
+        frame_count = 0 # Скидання лічильника кадрів
+        last_time = current_time # Оновлення часу останнього кадру
+    cv.putText(frame, f"FPS: {fps}", (10, 30), 
+               cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2) # Відображення частоти кадрів
+
     # Отримання об'єктів від моделі
-    results = []
-    boxes = model(frame)[0].boxes
-    for b in boxes:
-        cords = b.xyxy[0].tolist()
-        x1, y1, x2, y2 = map(int, cords)
-        conf = round(b.conf[0].item(), 2)  # Впевненість детектора
-        obj_id = hash((x1, y1, x2, y2))  # Унікальний ID на основі координат
-        results.append([[x1, y1, x2, y2], conf, obj_id])
+    if frame_count % YOLO_SKIP_FRAMES == 0:  # Пропуск кадрів для YOLO
+        results = model(frame)[0].boxes
+        if results:  # Перевірка, чи є результати
+            for b in results:
+                cords = b.xyxy[0].tolist()
+                x1, y1, x2, y2 = map(int, cords)
+                conf = round(b.conf[0].item(), 2)
 
-    # Відображення треків
-    color = (0, 255, 0)  # Колір треку
-        # Зменшення розміру прямокутника для відображення
-    box_width = x2 - x1
-    box_height = y2 - y1
-    shrink_factor = 0.7  # Фактор зменшення
-    new_width = int(box_width * shrink_factor)
-    new_height = int(box_height * shrink_factor)
-    # Обчислення центру прямокутника
-    x_center = x1 + box_width // 2
-    y_center = y1 + box_height // 2
+        # Відображення треків
+            color = (0, 255, 0)  # Колір треку
+            box_width = x2 - x1
+            box_height = y2 - y1
+            shrink_factor = 0.7  # Фактор зменшення
+            new_width = int(box_width * shrink_factor)
+            new_height = int(box_height * shrink_factor)
+            # Обчислення центру прямокутника
+            x_center = x1 + box_width // 2
+            y_center = y1 + box_height // 2
 
-    x1_new = x_center - new_width // 2
-    y1_new = y_center + box_height // 2
-    x2_new = x_center + new_width // 2
-    y2_new = y_center - new_height // 2
+            x1_new = x_center - new_width // 2
+            y1_new = y_center + box_height // 2
+            x2_new = x_center + new_width // 2
+            y2_new = y_center - new_height // 2
         
-    # Відображення треків
-    cv.rectangle(frame, (x1_new, y1_new), (x2_new, y2_new), color, 2)
-        
-    # Відображення центру треку
-    cv.circle(frame, (x_center, y_center), 2, (0,0,255), -1)  # Відображення центру треку
+            # Відображення треків
+            cv.rectangle(frame, (x1_new, y1_new), (x2_new, y2_new), color, 2)
+            cv.circle(frame, (x_center, y_center), 2, (0, 0, 255), -1)  # Відображення центру треку
+            cv.putText(frame, "Target", (x1_new, y1_new - 10),
+                       cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            
 
-    # Відображення ID треку
-    cv.putText(frame, "Target", (x1_new, y1_new - 10),
-                cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-        
-    # Вибраний об'єкт
-    if selected_track_id is not None:
-        cv.putText(frame, f"Selected: {selected_track_id}",
-                   (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
         
     # Відображення тексту для підказок
     # Режимоння кольорового простору
@@ -148,6 +159,17 @@ while True:
 
     # Відображення кадру
     cv.imshow('Frame', frame)
+
+    # Відображення часу затримки
+    frame_end_time = time.time() # Час закінчення кадру
+    elapsed_time = frame_end_time - frame_start_time # Час затримки
+    frame_start_time = frame_end_time # Оновлення часу початку кадру
+    # Затримка для досягнення бажаної частоти кадрів
+    target_time_per_frame = 1.0 / MAX_FPS
+    if elapsed_time < target_time_per_frame:
+        time.sleep(target_time_per_frame - elapsed_time)
+
+    # Налаштування клавіш
     key = cv.waitKey(10) # Затримка для відображення кадру
     if key == 27:  # Вихід при ESC
         break
@@ -157,9 +179,6 @@ while True:
             print("Перемикання на сірий")
         else:
             print("Перемикання на кольоровий")
-    elif key == ord('r'): # Скидання вибору
-        selected_track_id = None
-        print("Скинуто вибір об'єкта")
     elif key == ord('c'): # Перемикання на камеру
         video.release()
         video = cv.VideoCapture(0) # Відкриття камери
