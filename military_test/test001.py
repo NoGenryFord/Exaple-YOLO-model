@@ -5,6 +5,7 @@ import numpy as np
 import time
 import torch
 # Перевірка наявності GPU
+##togit
 
     
 
