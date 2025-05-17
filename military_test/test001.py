@@ -20,6 +20,7 @@ model.conf = 0.8  # Впевненість детектора
 # Вхідне відео
 video_path = 'military_test/test/apc1.mp4'  # Шлях до відео
 VIDEO_LIFE = 0 #Use for life_translation tracking (camera)
+VIDEO_LIFE_RASP = "libcamerasrc ! videoconvert ! appsink", cv.CAP_GSTREAMER # Шлях до відео
 video = cv.VideoCapture(video_path)
 # Перевірка відкриття відео
 if not video.isOpened():
@@ -136,17 +137,17 @@ while True:
     # Відображення тексту для підказок
     # Режимоння кольорового простору
     if is_gray_mode:
-        cv.putText(frame, "Gray mode ON", (600, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
-        cv.putText(frame, "Gray mode ON", (600, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
+        cv.putText(frame, "Gray mode ON", (STANDARD_WIDTH - 250, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
+        cv.putText(frame, "Gray mode ON", (STANDARD_WIDTH - 250, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
     else:
-        cv.putText(frame, "Gray mode OFF", (600, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
-        cv.putText(frame, "Gray mode OFF", (600, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст           
+        cv.putText(frame, "Gray mode OFF", (STANDARD_WIDTH - 200, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
+        cv.putText(frame, "Gray mode OFF", (STANDARD_WIDTH - 200, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст           
     # Вказівка на вихід
     cv.putText(frame, "Press 'ESC' to exit", (10, 50), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
     cv.putText(frame, "Press 'ESC' to exit", (10, 50), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
     # Вказівка на вибір об'єкта
-    cv.putText(frame, "Click on object to select", (10, 70), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
-    cv.putText(frame, "Click on object to select", (10, 70), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
+    #cv.putText(frame, "Click on object to select", (10, 70), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
+    #cv.putText(frame, "Click on object to select", (10, 70), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
      # Вказівка на скидання вибору
     cv.putText(frame, "Press 'r' to reset selection", (10, 90), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
     cv.putText(frame, "Press 'r' to reset selection", (10, 90), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
@@ -156,7 +157,12 @@ while True:
     # Вказівка на перемикання камери
     cv.putText(frame, "Press 'c' to switch to camera", (10, 130), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
     cv.putText(frame, "Press 'c' to switch to camera", (10, 130), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
-
+    # Вказівка на перемикання на Raspberry Pi камеру
+    cv.putText(frame, "Press '1' to switch to Raspberry Pi camera", (10, 150), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
+    cv.putText(frame, "Press '1' to switch to Raspberry Pi camera", (10, 150), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
+    # Вказівка на перезапуск відео
+    cv.putText(frame, "Press 'v' to restart video", (10, 170), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)  # Чорна обведення
+    cv.putText(frame, "Press 'v' to restart video", (10, 170), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)  # Червоний текст
     # Відображення кадру
     cv.imshow('Frame', frame)
 
@@ -185,6 +191,22 @@ while True:
         print("Відкрито камеру")
         if not video.isOpened():
             print("Error: Could not open camera.")
+            video.release()
+        continue
+    elif key == ord('1'):  # Перемикання на Raspberry Pi камеру
+        video.release()
+        video = cv.VideoCapture("libcamerasrc ! videoconvert ! appsink", cv.CAP_GSTREAMER)
+        print("Перемикання на Raspberry Pi камеру")
+        if not video.isOpened():
+            print("Error: Could not open Raspberry Pi camera.")
+            video.release()
+        continue
+    elif key == ord('v'):  # Перезапуск відео
+        video.release()
+        video = cv.VideoCapture(video_path)  # Знову відкриваємо відео
+        print("Відео перезапущено")
+        if not video.isOpened():
+            print("Error: Could not open video.")
             video.release()
         continue
 
