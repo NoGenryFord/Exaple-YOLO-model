@@ -1,92 +1,131 @@
-# Drone_AI: YOLOv8 та DeepSort для трекінгу об'єктів
+# Drone_AI: YOLOv8 Object Detection & DeepSort Tracking
 
-Цей проєкт використовує модель YOLOv8 для детекції об'єктів та DeepSort для трекінгу. Програма дозволяє обробляти відео або працювати з камерою в реальному часі.
-
----
-
-## Вимоги
-
-Перед запуском переконайтеся, що у вас встановлено:
-- Python 3.8 або новіший
-- Віртуальне середовище Python (`venv`)
-- Необхідні бібліотеки (див. нижче)
+This project uses YOLOv8 for object detection and DeepSort for object tracking. It supports video file input or real-time camera processing, and is tested on both PC and Raspberry Pi (including Pi 5).
 
 ---
 
-## Установка
+## Requirements
 
-1. **Клонування репозиторію**
+- Python 3.8+
+- Virtual environment (`venv`)
+- Required libraries (see below)
+- For Raspberry Pi: Pi OS (Bookworm recommended), camera enabled, GStreamer installed
+
+---
+
+## Installation
+
+1. **Clone the repository**
    ```bash
    git clone https://github.com/NoGenryFord/Drone-AI.git
    cd Drone_AI
+   ```
+2. **Create and activate a virtual environment**
+   ```bash
+   python -m venv venv
+   # For Windows:
+   .\venv\Scripts\activate
+   # For Linux/Mac:
+   source venv/bin/activate
+   ```
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-2. Створення та активація віртуального середовища
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\activate  # Для Windows
-    source venv/bin/activate  # Для Linux/Mac
+---
 
-3. Встановлення залежностей
-    ```bash
-    pip install -r requirements.txt
+## Running the Program
 
-## Запуск програми
+1. **Start the script**
+   ```bash
+   python main.py
+   ```
+2. **Controls**
 
-1. Запуск скрипта
-    ```bash
-    python military_test/test001.py
+   - `ESC`: Exit
+   - `g`: Toggle grayscale mode
+   - `c`: Switch to default camera
+   - `1`: Switch to Raspberry Pi camera (GStreamer)
+   - `v`: Restart video
+   - `r`: Reset selection (if implemented)
 
-2. Керування
-    ESC: Вихід із програми
-    Ліва кнопка миші: Вибір об'єкта
-    R: Скидання вибору
-    G: Перемикання між кольоровим і сірим режимом
-    C: Перемикання на камеру
+3. **Functionality**
+   - **Object Detection**: YOLOv8 model detects objects in video/camera stream.
+   - **Object Tracking**: DeepSort tracks detected objects across frames.
+   - **Interactive**: Switch video sources, toggle modes, and view real-time FPS and confidence.
 
-3. Функціонал
-    Детекція об'єктів: Використовується модель YOLOv8 для виявлення об'єктів.
-    Трекінг об'єктів: DeepSort забезпечує трекінг об'єктів між кадрами.
-    Інтерактивність: Можливість вибору об'єкта, перемикання режимів і джерел відео.
+---
 
-## Структура проєкту
+## Project Structure
 
+```
 Drone_AI/
 │
-├── military_test/
-│   ├── [test001.py](http://_vscodecontentref_/2)          # Основний скрипт
-│   ├── weights/            # Ваги моделі YOLOv8
-│   │   └── model_3_best.pt # Файл ваг моделі
-│   └── test/               # Тестові відео
-│       └── tank5.mp4       # Вхідне відео
-│
-├── venv/                   # Віртуальне середовище (ігнорується Git)
-├── [requirements.txt](http://_vscodecontentref_/3)        # Список залежностей
-└── [README.md](http://_vscodecontentref_/4)               # Інструкція
+├── main.py                  # Main script (all logic here)
+├── weights/
+│   └── YOLO/
+│       └── model_3_best.pt  # YOLOv8 model weights
+├── data/
+│   └── tank1.mp4            # Example input video
+├── venv/                    # Virtual environment (not in Git)
+├── requirements.txt         # Dependencies
+└── README.md                # This file
+```
 
-## Залежності
+---
 
-Список основних бібліотек:
-    ultralytics
-    deep_sort_realtime
-    opencv-python
-    numpy
+## Dependencies
 
-Встановіть їх за допомогою:
-    ```bash
-    pip install -r [requirements.txt](http://_vscodecontentref_/5)
+Main libraries:
 
-Примітки
-    Переконайтеся, що файл ваг моделі (model_3_best.pt) знаходиться у папці weights.
-    Для роботи з камерою переконайтеся, що вона підключена до вашого пристрою.
+- ultralytics
+- deep_sort_realtime
+- opencv-python
+- numpy
 
-## Ліцензія та Правові положення
+Install with:
 
-**КОМЕРЦІЙНЕ ПРОГРАМНЕ ЗАБЕЗПЕЧЕННЯ**  
-Copyright © 2025. Всі права захищені.
+```bash
+pip install -r requirements.txt
+```
 
-Це програмне забезпечення поставляється з обмеженою комерційною ліцензією.
-Повний текст ліцензійної угоди доступний у файлі [LICENSE](LICENSE).
+**Note:** Ensure the model weights file (`model_3_best.pt`) is in the correct folder. For camera use, make sure the camera is connected and enabled on your device.
 
-Для отримання ліцензії на використання звертайтеся:
+---
+
+## Running on Raspberry Pi 5
+
+- Make sure your Pi OS is up to date and camera is enabled (`libcamera-hello` should work).
+- Install GStreamer and plugins:
+  ```bash
+  sudo apt update
+  sudo apt install -y gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
+  sudo apt install -y gstreamer1.0-libcamera
+  ```
+- For best performance, use the GStreamer pipeline for the Pi camera:
+  - In the app, press `1` to switch to the Pi camera (`v4l2src device=/dev/video0 ! videoconvert ! appsink`).
+
+---
+
+## Performance Tips & Compilation
+
+- For best speed on Raspberry Pi, use:
+  - Lower video resolution (e.g., 320x240)
+  - Lower FPS (e.g., 15)
+- For maximum performance, use hardware acceleration (e.g., OpenVINO, Coral, or NPU if available on your Pi).
+
+---
+
+## License & Legal
+
+**COMMERCIAL SOFTWARE**  
+Copyright © 2025. All rights reserved.
+
+This software is provided under a limited commercial license.  
+See [LICENSE](LICENSE) for details.
+
+For licensing, contact:
+
 - Email: your.contact@example.com
-- Тел.: +XX XXX XXX XXXX
+- Phone: +XX XXX XXX XXXX

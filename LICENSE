@@ -1,13 +1,18 @@
 ЛІЦЕНЗІЙНА УГОДА НА ПРОГРАМНЕ ЗАБЕЗПЕЧЕННЯ / SOFTWARE LICENSE AGREEMENT
 
-Copyright (C) 2025. All rights reserved. / Всі права захищені.
+Ця ліцензія складена українською та англійською мовами. Обидві версії мають однакову юридичну силу. У разі розбіжностей перевага надається українському тексту.
 
+Дата набуття чинності: 01 січня 2025 року
+
+========================
 [UKRAINIAN]
+========================
 
 1. ВИЗНАЧЕННЯ
    "Програмне забезпечення" означає програмний продукт Drone_AI та супутню документацію.
    "Ліцензіар" - власник авторських прав на Програмне забезпечення.
    "Ліцензіат" - особа або організація, яка отримала право на використання Програмного забезпечення.
+   "Офіційно придбане обладнання" - апаратне забезпечення, придбане у виробника або його офіційних партнерів.
 
 2. НАДАННЯ ЛІЦЕНЗІЇ
    Ліцензіар надає Ліцензіату обмежене, невиключне право на використання Програмного забезпечення виключно на офіційно придбаному обладнанні виробника.
@@ -18,6 +23,7 @@ Copyright (C) 2025. All rights reserved. / Всі права захищені.
    - Декомпілювати, дизасемблювати або виконувати реверс-інжиніринг
    - Передавати, продавати або надавати в оренду Програмне забезпечення
    - Видаляти або змінювати повідомлення про авторські права
+   - Використовувати Програмне забезпечення для військових цілей
 
 4. ТЕРМІН ДІЇ
    Ліцензія діє до моменту її припинення. Ліцензіар може припинити дію ліцензії у разі порушення будь-якого з положень цієї угоди.
@@ -28,12 +34,23 @@ Copyright (C) 2025. All rights reserved. / Всі права захищені.
 6. ЗАСТОСОВНЕ ПРАВО
    Ця угода регулюється законодавством України та Чеської Республіки.
 
+Додаткова інформація або придбання ліцензії:
+Email: your.contact@example.com
+Тел.: +XX XXX XXX XXXX
+
+========================
 [ENGLISH]
+========================
+
+This license is made in both Ukrainian and English. Both versions have equal legal force. In case of discrepancies, the Ukrainian text shall prevail.
+
+Effective date: January 1, 2025
 
 1. DEFINITIONS
    "Software" means the Drone_AI software product and accompanying documentation.
    "Licensor" - the copyright owner of the Software.
    "Licensee" - person or organization that has received the right to use the Software.
+   "Officially purchased equipment" - hardware purchased from the manufacturer or its official partners.
 
 2. LICENSE GRANT
    Licensor grants Licensee a limited, non-exclusive right to use the Software exclusively on officially purchased manufacturer's equipment.
@@ -44,6 +61,7 @@ Copyright (C) 2025. All rights reserved. / Всі права захищені.
    - Decompile, disassemble or reverse engineer
    - Transfer, sell or lease the Software
    - Remove or modify copyright notices
+   - Use the Software for military purposes
 
 4. TERM
    The license is valid until terminated. Licensor may terminate the license if any of these terms are breached.
