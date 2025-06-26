@@ -4,10 +4,6 @@ import cv2 as cv
 import numpy as np
 import time
 import torch
-# Перевірка наявності GPU
-##togit
-
-    
 
 
 # OpenCV performance settings
