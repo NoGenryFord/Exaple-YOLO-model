@@ -11,11 +11,11 @@ cv.setUseOptimized(True)  # Використання оптимізованих 
 cv.setNumThreads(4)  # Кількість потоків для OpenCV
 
 # Модель і трекер
-model = YOLO('military_test/weights/model_3_best.pt')  # Завантаження моделі YOLOv8
+model = YOLO('weights/YOLO/model_3_best.pt')  # Завантаження моделі YOLOv8
 model.conf = 0.8  # Впевненість детектора
 
 # Вхідне відео
-video_path = 'military_test/test/apc1.mp4'  # Шлях до відео
+video_path = 'data/lav1.mp4'  # Шлях до відео
 VIDEO_LIFE = 0 #Use for life_translation tracking (camera)
 VIDEO_LIFE_RASP = "libcamerasrc ! videoconvert ! appsink", cv.CAP_GSTREAMER # Шлях до відео
 video = cv.VideoCapture(video_path)
