@@ -1,4 +1,4 @@
-# Drone_AI: YOLOv8 Object Detection & DeepSort Tracking
+# YOLO Object Detection & DeepSort Tracking
 
 This project uses YOLOv8 for object detection and DeepSort for object tracking. It supports video file input or real-time camera processing, and is tested on both PC and Raspberry Pi (including Pi 5).
 
@@ -17,8 +17,8 @@ This project uses YOLOv8 for object detection and DeepSort for object tracking. 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/NoGenryFord/Drone-AI.git
-   cd Drone_AI
+   git clone https://github.com/NoGenryFord/Exaple-YOLO-model.git
+   cd Exaple-YOLO-model
    ```
 2. **Create and activate a virtual environment**
    ```bash
@@ -60,7 +60,7 @@ This project uses YOLOv8 for object detection and DeepSort for object tracking. 
 ## Project Structure
 
 ```
-Drone_AI/
+Exaple-YOLO-model/
 │
 ├── main.py                  # Main script (all logic here)
 ├── weights/
