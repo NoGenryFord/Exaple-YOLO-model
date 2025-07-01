@@ -162,7 +162,8 @@ def main():
         ret, frame = video.read()
         if not ret:
             # Show black screen with message if no signal
-            frame = np.zeros((STANDARD_HEIGHT, STANDARD_WIDTH, 3), dtype=np.uint8)
+            frame = np.zeros(
+                (STANDARD_HEIGHT, STANDARD_WIDTH, 3), dtype=np.uint8)
             cv.putText(
                 frame,
                 "No Signal",
