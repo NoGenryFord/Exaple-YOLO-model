@@ -37,17 +37,55 @@ This project uses YOLOv8 for object detection and DeepSort for object tracking. 
 
 ## Running the Program
 
+### Option 1: PyTorch Version (Original)
 1. **Start the script**
    ```bash
    python main.py
    ```
-2. **Controls**
 
+### Option 2: TensorFlow Lite Version (Optimized for ARM/Raspberry Pi)
+1. **Convert model to TFLite (if not already done)**
+   ```bash
+   python src/convert_to_tflite/onnx2tf_converter.py
+   ```
+
+2. **Run TFLite version**
+   ```bash
+   python main_tflite.py
+   ```
+
+3. **Test TFLite model**
+   ```bash
+   python test_tflite.py
+   ```
+
+### For Raspberry Pi 5 Deployment
+```bash
+# Install system dependencies
+sudo apt update
+sudo apt install python3-pip python3-venv libgstreamer1.0-0 gstreamer1.0-plugins-base
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install TensorFlow Lite runtime (lighter than full TensorFlow)
+pip install tflite-runtime
+
+# Install other dependencies
+pip install opencv-python deep-sort-realtime ultralytics numpy
+
+# Run TFLite version
+python3 main_tflite.py
+```
+
+### Controls (Both Versions)
    - `ESC`: Exit
    - `g`: Toggle grayscale mode
    - `c`: Switch to default camera
    - `1`: Switch to Raspberry Pi camera (GStreamer)
    - `v`: Restart video
+   - `r`: Reset tracker
    - `r`: Reset selection (if implemented)
 
 3. **Functionality**
