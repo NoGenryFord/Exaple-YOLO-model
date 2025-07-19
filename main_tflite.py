@@ -22,11 +22,11 @@ cv.setNumThreads(4)
 STANDARD_WIDTH = 640  # Standard frame width
 STANDARD_HEIGHT = 480  # Standard frame height
 MAX_FPS = 60  # Збільшуємо максимальний FPS
-YOLO_SKIP_FRAMES = 5  # Збільшуємо кількість пропущених кадрів для кращої продуктивності
+YOLO_SKIP_FRAMES = 2  # Зменшуємо кількість пропущених кадрів для кращої детекції
 
 # Model paths
 TFLITE_MODEL_PATH = "weights/YOLO/model_3_simple.tflite"
-CONFIDENCE_THRESHOLD = 0.1  # Знижуємо поріг для більш чутливої детекції
+CONFIDENCE_THRESHOLD = 0.5  # Підвищуємо поріг для більш точної детекції
 IOU_THRESHOLD = 0.4
 
 # Video paths
@@ -113,35 +113,50 @@ class TFLiteYOLO:
         return input_data.astype(np.float32)
     
     def postprocess_output(self, output_data, original_shape):
-        """Обробка виходу моделі"""
-        # Це спрощена версія для dummy моделі
-        # Генеруємо випадкові, але реалістичні детекції
+        """Обробка виходу TFLite YOLO моделі"""
+        if output_data is None:
+            return []
+        
+        # Отримуємо розміри оригінального кадру
+        orig_height, orig_width = original_shape[:2]
+        
+        # Для цієї TFLite моделі вихід має форму [1, 5, 8400]
+        # 5 = [x_center, y_center, width, height, confidence]
+        predictions = output_data[0]  # Видаляємо batch dimension -> [5, 8400]
+        
+        # Транспонуємо для зручності: [5, 8400] -> [8400, 5]
+        predictions = predictions.T
         
         detections = []
         
-        # Генеруємо 2-5 випадкових детекцій
-        import random
-        num_detections = random.randint(2, 5)
-        
-        orig_height, orig_width = original_shape[:2]
-        
-        for _ in range(num_detections):
-            # Генеруємо випадкові координати
-            x1 = random.randint(0, orig_width - 100)
-            y1 = random.randint(0, orig_height - 100)
-            x2 = x1 + random.randint(50, 150)
-            y2 = y1 + random.randint(50, 150)
+        for pred in predictions:
+            # Отримуємо координати bbox та confidence
+            x_center, y_center, width, height, confidence = pred
             
-            # Обмежуємо координати
-            x2 = min(x2, orig_width)
-            y2 = min(y2, orig_height)
-            
-            # Генеруємо confidence
-            confidence = random.uniform(0.3, 0.9)
-            
-            # Перевіряємо, чи бокс має розумний розмір
-            if x2 > x1 and y2 > y1:
-                detections.append([x1, y1, x2, y2, confidence])
+            # Перевіряємо confidence threshold
+            if confidence > CONFIDENCE_THRESHOLD:
+                # Нормалізовані координати потрібно помножити на розміри кадру
+                # Припускаємо, що модель віддає нормалізовані координати [0, 1]
+                x_center_abs = x_center * orig_width
+                y_center_abs = y_center * orig_height
+                width_abs = width * orig_width
+                height_abs = height * orig_height
+                
+                # Конвертуємо з center format в corner format
+                x1 = int(x_center_abs - width_abs / 2)
+                y1 = int(y_center_abs - height_abs / 2)
+                x2 = int(x_center_abs + width_abs / 2)
+                y2 = int(y_center_abs + height_abs / 2)
+                
+                # Обмежуємо координати
+                x1 = max(0, min(x1, orig_width - 1))
+                y1 = max(0, min(y1, orig_height - 1))
+                x2 = max(0, min(x2, orig_width - 1))
+                y2 = max(0, min(y2, orig_height - 1))
+                
+                # Перевіряємо, чи бокс має розумний розмір
+                if x2 > x1 and y2 > y1:
+                    detections.append([x1, y1, x2, y2, confidence])
         
         return detections
     
@@ -193,11 +208,31 @@ class TFLiteYOLO:
         return intersection / union if union > 0 else 0.0
     
     def detect(self, frame):
-        """Виконання детекції об'єктів (спрощена версія для кращої продуктивності)"""
-        # Пропускаємо складний препроцесинг для кращої продуктивності
-        # Просто використовуємо dummy детекції
-        detections = self.postprocess_output(None, frame.shape)
-        return detections
+        """Виконання детекції об'єктів за допомогою TFLite моделі"""
+        try:
+            # Препроцесинг кадру
+            input_data = self.preprocess_frame(frame)
+            
+            # Встановлюємо вхідний тензор
+            self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
+            
+            # Виконуємо інференс
+            self.interpreter.invoke()
+            
+            # Отримуємо результат
+            output_data = self.interpreter.get_tensor(self.output_details[0]['index'])
+            
+            # Постпроцесинг
+            detections = self.postprocess_output(output_data, frame.shape)
+            
+            # Застосовуємо NMS
+            detections = self.apply_nms(detections, IOU_THRESHOLD)
+            
+            return detections
+            
+        except Exception as e:
+            print(f"⚠️ Помилка TFLite детекції: {e}")
+            return []
 
 # ----------------------
 # Utility functions (копіюємо з original main.py)
@@ -232,9 +267,10 @@ def draw_hints(frame, is_gray_mode, width, height, fps=0, detections_count=0):
         ("Press '1' to switch to Raspberry Pi camera", 10, y + 100),
         ("Press 'v' to switch to video", 10, y + 120),
         ("Press 'n' for next video", 10, y + 140),
-        ("TFLite Model Active", 10, y + 160),  # Додаємо індикатор TFLite
-        (f"FPS: {fps:.1f}", 10, y + 180),  # FPS
-        (f"Detections: {detections_count}", 10, y + 200),  # Кількість детекцій
+        ("Press 'p' for previous video", 10, y + 160),
+        ("TFLite Model Active", 10, y + 180),  # Додаємо індикатор TFLite
+        (f"FPS: {fps:.1f}", 10, y + 200),  # FPS
+        (f"Detections: {detections_count}", 10, y + 220),  # Кількість детекцій
     ]
     for text, x, y_pos in hints:
         (text_width, text_height), baseline = cv.getTextSize(
@@ -319,7 +355,11 @@ def main():
     # Ініціалізація DeepSort
     deep_sort = DeepSort(max_age=30, n_init=3)
     
-    # Налаштування відео/камери
+    # ========================================
+    # VIDEO/CAMERA SWITCHING FUNCTIONALITY
+    # ========================================
+    # Цей блок можна легко видалити, якщо не потрібен
+    
     cap = None
     current_video_index = 0
     is_camera_mode = True
@@ -352,7 +392,45 @@ def main():
                 print(f"❌ Відео файл не знайдено: {video_path}")
         return None, True
     
-    # Спочатку пробуємо камеру
+    def switch_to_next_video():
+        """Переключає на наступне відео"""
+        nonlocal current_video_index, cap, is_camera_mode
+        if not is_camera_mode:
+            current_video_index = (current_video_index + 1) % len(VIDEO_FILES)
+            cap.release()
+            cap, is_camera_mode = open_video(current_video_index)
+            return cap is not None
+        return False
+    
+    def switch_to_previous_video():
+        """Переключає на попереднє відео"""
+        nonlocal current_video_index, cap, is_camera_mode
+        if not is_camera_mode:
+            current_video_index = (current_video_index - 1) % len(VIDEO_FILES)
+            cap.release()
+            cap, is_camera_mode = open_video(current_video_index)
+            return cap is not None
+        return False
+    
+    def switch_to_camera():
+        """Переключає на камеру"""
+        nonlocal cap, is_camera_mode
+        cap.release()
+        cap, is_camera_mode = open_camera()
+        return cap is not None
+    
+    def switch_to_video():
+        """Переключає на відео"""
+        nonlocal cap, is_camera_mode
+        cap.release()
+        cap, is_camera_mode = open_video(current_video_index)
+        return cap is not None
+    
+    # ========================================
+    # END OF VIDEO/CAMERA SWITCHING
+    # ========================================
+    
+    # Налаштування початкового джерела
     cap, is_camera_mode = open_camera()
     
     if cap is None:
@@ -369,6 +447,7 @@ def main():
     print("   c - переключення на камеру")
     print("   v - переключення на відео")
     print("   n - наступне відео")
+    print("   p - попереднє відео")
     
     # Основний цикл
     frame_count = 0
@@ -385,10 +464,7 @@ def main():
         if not ret:
             if not is_camera_mode:
                 # Якщо відео закінчилося, переходимо до наступного
-                current_video_index = (current_video_index + 1) % len(VIDEO_FILES)
-                cap.release()
-                cap, is_camera_mode = open_video(current_video_index)
-                if cap is None:
+                if not switch_to_next_video():
                     print("❌ Не вдалося відкрити наступне відео")
                     break
                 continue
@@ -443,27 +519,24 @@ def main():
             print("🔄 Трекер скинуто")
         elif key == ord('c'):
             # Переключення на камеру
-            cap.release()
-            cap, is_camera_mode = open_camera()
-            if cap is None:
+            if not switch_to_camera():
                 print("❌ Не вдалося переключитися на камеру")
                 break
         elif key == ord('v'):
             # Переключення на відео
-            cap.release()
-            cap, is_camera_mode = open_video(current_video_index)
-            if cap is None:
+            if not switch_to_video():
                 print("❌ Не вдалося переключитися на відео")
                 break
         elif key == ord('n'):
             # Наступне відео
-            if not is_camera_mode:
-                current_video_index = (current_video_index + 1) % len(VIDEO_FILES)
-                cap.release()
-                cap, is_camera_mode = open_video(current_video_index)
-                if cap is None:
-                    print("❌ Не вдалося відкрити наступне відео")
-                    break
+            if not switch_to_next_video():
+                print("❌ Не вдалося відкрити наступне відео")
+                break
+        elif key == ord('p'):
+            # Попереднє відео
+            if not switch_to_previous_video():
+                print("❌ Не вдалося відкрити попереднє відео")
+                break
         
         # Обмеження FPS (збільшуємо до 60 для кращої продуктивності)
         frame_start_time = limit_fps(frame_start_time, 60)

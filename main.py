@@ -4,6 +4,7 @@ import cv2 as cv
 import numpy as np
 import time
 import torch
+import os
 
 # ----------------------
 # OpenCV performance settings
@@ -18,6 +19,15 @@ STANDARD_WIDTH = 640  # Standard frame width
 STANDARD_HEIGHT = 480  # Standard frame height
 MAX_FPS = 30  # Maximum frames per second
 YOLO_SKIP_FRAMES = 3  # Number of frames to skip for YOLO detection
+
+# Video paths
+VIDEO_FILES = [
+    "data/sample_battle_1.mp4",
+    "data/sample_battle_2.mp4", 
+    "data/sample_battle_3.MP4",
+    "data/tank1.mp4",
+    "data/tank2.mp4"
+]
 
 
 # ----------------------
@@ -53,7 +63,9 @@ def draw_hints(frame, is_gray_mode, width, height):
         ("Press 'g' to toggle gray mode", 10, y + 60),
         ("Press 'c' to switch to camera", 10, y + 80),
         ("Press '1' to switch to Raspberry Pi camera", 10, y + 100),
-        ("Press 'v' to restart video", 10, y + 120),
+        ("Press 'v' to switch to video", 10, y + 120),
+        ("Press 'n' for next video", 10, y + 140),
+        ("Press 'p' for previous video", 10, y + 160),
     ]
     for text, x, y_pos in hints:
         (text_width, text_height), baseline = cv.getTextSize(
@@ -145,11 +157,103 @@ def main():
     # Load YOLOv8 model
     model = YOLO("weights/YOLO/model_3_best.pt")
     model.conf = 0.8
-    video_path = "data/tank1.mp4"  # Path to the video file
-    video = cv.VideoCapture(video_path)
-    if not video.isOpened():
-        print("Error: Could not open video.")
-        return
+    
+    # ========================================
+    # VIDEO/CAMERA SWITCHING FUNCTIONALITY
+    # ========================================
+    # Цей блок можна легко видалити, якщо не потрібен
+    
+    video = None
+    current_video_index = 0
+    is_camera_mode = True
+    
+    def open_camera():
+        """Відкриває камеру"""
+        video = cv.VideoCapture(0)
+        if video.isOpened():
+            video.set(cv.CAP_PROP_FRAME_WIDTH, STANDARD_WIDTH)
+            video.set(cv.CAP_PROP_FRAME_HEIGHT, STANDARD_HEIGHT)
+            video.set(cv.CAP_PROP_FPS, MAX_FPS)
+            print("✅ Камера налаштована успішно")
+            return video, True
+        else:
+            print("❌ Не вдалося відкрити камеру")
+            return None, False
+    
+    def open_video(video_index):
+        """Відкриває відео файл"""
+        if video_index < len(VIDEO_FILES):
+            video_path = VIDEO_FILES[video_index]
+            if os.path.exists(video_path):
+                video = cv.VideoCapture(video_path)
+                if video.isOpened():
+                    print(f"✅ Відео відкрито: {video_path}")
+                    return video, False
+                else:
+                    print(f"❌ Не вдалося відкрити відео: {video_path}")
+            else:
+                print(f"❌ Відео файл не знайдено: {video_path}")
+        return None, True
+    
+    def switch_to_next_video():
+        """Переключає на наступне відео"""
+        nonlocal current_video_index, video, is_camera_mode
+        if not is_camera_mode:
+            current_video_index = (current_video_index + 1) % len(VIDEO_FILES)
+            video.release()
+            video, is_camera_mode = open_video(current_video_index)
+            return video is not None
+        return False
+    
+    def switch_to_previous_video():
+        """Переключає на попереднє відео"""
+        nonlocal current_video_index, video, is_camera_mode
+        if not is_camera_mode:
+            current_video_index = (current_video_index - 1) % len(VIDEO_FILES)
+            video.release()
+            video, is_camera_mode = open_video(current_video_index)
+            return video is not None
+        return False
+    
+    def switch_to_camera():
+        """Переключає на камеру"""
+        nonlocal video, is_camera_mode
+        if video:
+            video.release()
+        video, is_camera_mode = open_camera()
+        return video is not None
+    
+    def switch_to_video():
+        """Переключає на відео"""
+        nonlocal video, is_camera_mode
+        if video:
+            video.release()
+        video, is_camera_mode = open_video(current_video_index)
+        return video is not None
+    
+    # ========================================
+    # END OF VIDEO/CAMERA SWITCHING
+    # ========================================
+    
+    # Налаштування початкового джерела
+    video, is_camera_mode = open_camera()
+    
+    if video is None:
+        # Якщо камера не працює, пробуємо відео
+        video, is_camera_mode = open_video(current_video_index)
+        if video is None:
+            print("❌ Не вдалося відкрити ні камеру, ні відео")
+            return
+    
+    print("📋 Керування:")
+    print("   ESC - вихід")
+    print("   g - перемикання в чорно-білий режим")
+    print("   c - переключення на камеру")
+    print("   1 - переключення на Raspberry Pi камеру")
+    print("   v - переключення на відео")
+    print("   n - наступне відео")
+    print("   p - попереднє відео")
+    
     cv.namedWindow("Frame")
     is_gray_mode = False
     frame_start_time = time.time()
@@ -161,28 +265,35 @@ def main():
         # Read frame from video
         ret, frame = video.read()
         if not ret:
-            # Show black screen with message if no signal
-            frame = np.zeros((STANDARD_HEIGHT, STANDARD_WIDTH, 3), dtype=np.uint8)
-            cv.putText(
-                frame,
-                "No Signal",
-                (STANDARD_WIDTH // 2 - 100, STANDARD_HEIGHT // 2),
-                cv.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 255),
-                2,
-            )
-            cv.putText(
-                frame,
-                "Waiting for video...",
-                (STANDARD_WIDTH // 2 - 150, STANDARD_HEIGHT // 2 + 40),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 255, 255),
-                1,
-            )
-            frame_width = STANDARD_WIDTH
-            frame_height = STANDARD_HEIGHT
+            if not is_camera_mode:
+                # Якщо відео закінчилося, переходимо до наступного
+                if not switch_to_next_video():
+                    print("❌ Не вдалося відкрити наступне відео")
+                    break
+                continue
+            else:
+                # Show black screen with message if no signal from camera
+                frame = np.zeros((STANDARD_HEIGHT, STANDARD_WIDTH, 3), dtype=np.uint8)
+                cv.putText(
+                    frame,
+                    "No Signal",
+                    (STANDARD_WIDTH // 2 - 100, STANDARD_HEIGHT // 2),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 0, 255),
+                    2,
+                )
+                cv.putText(
+                    frame,
+                    "Waiting for camera...",
+                    (STANDARD_WIDTH // 2 - 150, STANDARD_HEIGHT // 2 + 40),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    1,
+                )
+                frame_width = STANDARD_WIDTH
+                frame_height = STANDARD_HEIGHT
         else:
             frame_count += 1
             # Resize frame
@@ -217,51 +328,48 @@ def main():
                         x1, y1, x2, y2 = map(int, cords)
                         conf = round(b.conf[0].item(), 2)
                         frame = draw_detection(frame, x1, y1, x2, y2, conf)
+        
         # Draw on-screen hints
         frame = draw_hints(frame, is_gray_mode, frame_width, frame_height)
         # Show frame
         cv.imshow("Frame", frame)
         # Limit FPS
         frame_start_time = limit_fps(frame_start_time, MAX_FPS)
+        
         # Keyboard controls (always active)
         key = cv.waitKey(10)
         if key == 27:  # Exit on ESC
             break
         elif key == ord("g"):  # Toggle grayscale mode
             is_gray_mode = not is_gray_mode
-            print(
-                "Switched to grayscale mode"
-                if is_gray_mode
-                else "Switched to color mode"
-            )
+            print(f"🎨 Чорно-білий режим: {'ON' if is_gray_mode else 'OFF'}")
         elif key == ord("c"):  # Switch to default camera
-            video.release()
-            video = cv.VideoCapture(0)
-            print("Default camera opened")
-            if not video.isOpened():
-                print("Error: Could not open camera.")
-                video.release()
-            continue
+            if not switch_to_camera():
+                print("❌ Не вдалося переключитися на камеру")
         elif key == ord("1"):  # Switch to Raspberry Pi camera (GStreamer)
-            video.release()
+            if video:
+                video.release()
             video = cv.VideoCapture(
                 "v4l2src device=/dev/video0 ! videoconvert ! appsink", cv.CAP_GSTREAMER
             )
-            print("Switched to Raspberry Pi camera (GStreamer)")
+            print("🔄 Перемикання на Raspberry Pi камеру (GStreamer)")
             if not video.isOpened():
-                print("Error: Could not open Raspberry Pi camera.")
+                print("❌ Не вдалося відкрити Raspberry Pi камеру")
                 video.release()
-            continue
-        elif key == ord("v"):  # Restart video
-            video.release()
-            video = cv.VideoCapture(video_path)
-            print("Video restarted")
-            if not video.isOpened():
-                print("Error: Could not open video.")
-                video.release()
-            continue
-    video.release()
+        elif key == ord("v"):  # Switch to video
+            if not switch_to_video():
+                print("❌ Не вдалося переключитися на відео")
+        elif key == ord("n"):  # Next video
+            if not switch_to_next_video():
+                print("❌ Не вдалося відкрити наступне відео")
+        elif key == ord("p"):  # Previous video
+            if not switch_to_previous_video():
+                print("❌ Не вдалося відкрити попереднє відео")
+    
+    if video:
+        video.release()
     cv.destroyAllWindows()
+    print("👋 Програма завершена")
 
 
 if __name__ == "__main__":
