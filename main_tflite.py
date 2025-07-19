@@ -445,6 +445,7 @@ def main():
     print("   g - перемикання в чорно-білий режим")
     print("   r - скидання трекера")
     print("   c - переключення на камеру")
+    print("   1 - переключення на Raspberry Pi камеру")
     print("   v - переключення на відео")
     print("   n - наступне відео")
     print("   p - попереднє відео")
@@ -522,6 +523,21 @@ def main():
             if not switch_to_camera():
                 print("❌ Не вдалося переключитися на камеру")
                 break
+        elif key == ord('1'):  # Switch to Raspberry Pi camera (GStreamer)
+            if cap:
+                cap.release()
+            cap = cv.VideoCapture(
+                "v4l2src device=/dev/video0 ! videoconvert ! appsink", cv.CAP_GSTREAMER
+            )
+            is_camera_mode = True
+            print("🔄 Перемикання на Raspberry Pi камеру (GStreamer)")
+            if not cap.isOpened():
+                print("❌ Не вдалося відкрити Raspberry Pi камеру")
+                # Fallback to regular camera
+                cap, is_camera_mode = open_camera()
+                if cap is None:
+                    print("❌ Не вдалося відкрити звичайну камеру")
+                    break
         elif key == ord('v'):
             # Переключення на відео
             if not switch_to_video():
