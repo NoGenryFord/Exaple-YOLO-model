@@ -9,6 +9,9 @@ import cv2 as cv
 import numpy as np
 import time
 import os
+import subprocess
+import threading
+import signal
 
 # ----------------------
 # OpenCV performance settings
@@ -37,6 +40,136 @@ VIDEO_FILES = [
     "data/tank1.mp4",
     "data/tank2.mp4"
 ]
+
+# Global variable for rpicam process
+rpicam_process = None
+
+def setup_rpicam_pipe():
+    """Налаштовує Raspberry Pi камеру через rpicam-vid та named pipe"""
+    global rpicam_process
+    
+    # Створюємо named pipe
+    pipe_path = "/tmp/rpicam_pipe"
+    
+    try:
+        # Видаляємо старий pipe якщо є
+        if os.path.exists(pipe_path):
+            os.unlink(pipe_path)
+        
+        # Створюємо named pipe
+        os.mkfifo(pipe_path)
+        print(f"📡 Створено named pipe: {pipe_path}")
+        
+        # Запускаємо rpicam-vid у фоновому режимі
+        cmd = [
+            "rpicam-vid",
+            "--timeout", "0",  # Безкінечна зйомка
+            "--width", str(STANDARD_WIDTH),
+            "--height", str(STANDARD_HEIGHT),
+            "--framerate", "30",
+            "--output", pipe_path,
+            "--codec", "mjpeg",  # MJPEG для кращої сумісності з OpenCV
+            "--inline"  # Inline headers для streaming
+        ]
+        
+        print(f"🚀 Запускаємо: {' '.join(cmd)}")
+        rpicam_process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid  # Створюємо нову group для керування процесом
+        )
+        
+        # Чекаємо трохи щоб процес запустився
+        time.sleep(2)
+        
+        # Відкриваємо pipe як відео потік
+        cap = cv.VideoCapture(pipe_path)
+        
+        if cap.isOpened():
+            print("✅ rpicam-vid підключено через named pipe")
+            return cap
+        else:
+            print("❌ Не вдалося відкрити named pipe")
+            cleanup_rpicam()
+            return None
+            
+    except Exception as e:
+        print(f"❌ Помилка налаштування rpicam: {e}")
+        cleanup_rpicam()
+        return None
+
+def cleanup_rpicam():
+    """Очищає ресурси rpicam"""
+    global rpicam_process
+    
+    if rpicam_process:
+        try:
+            # Завершуємо процес групу
+            os.killpg(os.getpgid(rpicam_process.pid), signal.SIGTERM)
+            rpicam_process.wait(timeout=5)
+        except:
+            try:
+                # Примусово завершуємо якщо не вдалося
+                os.killpg(os.getpgid(rpicam_process.pid), signal.SIGKILL)
+            except:
+                pass
+        rpicam_process = None
+    
+    # Видаляємо pipe
+    pipe_path = "/tmp/rpicam_pipe"
+    if os.path.exists(pipe_path):
+        try:
+            os.unlink(pipe_path)
+        except:
+            pass
+
+def setup_rpicam_http():
+    """Налаштовує Raspberry Pi камеру через HTTP streaming"""
+    global rpicam_process
+    
+    port = 8080
+    
+    try:
+        # Запускаємо rpicam-vid з HTTP streaming
+        cmd = [
+            "rpicam-vid",
+            "--timeout", "0",  # Безкінечна зйомка
+            "--width", str(STANDARD_WIDTH),
+            "--height", str(STANDARD_HEIGHT),
+            "--framerate", "30",
+            "--listen", "-o", f"tcp://0.0.0.0:{port}",
+            "--codec", "mjpeg",
+            "--inline"
+        ]
+        
+        print(f"🚀 Запускаємо HTTP streaming: {' '.join(cmd)}")
+        rpicam_process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        
+        # Чекаємо поки сервер запуститься
+        time.sleep(3)
+        
+        # Підключаємося до HTTP потоку
+        stream_url = f"tcp://127.0.0.1:{port}"
+        cap = cv.VideoCapture(stream_url)
+        
+        if cap.isOpened():
+            print(f"✅ HTTP streaming підключено: {stream_url}")
+            return cap
+        else:
+            print("❌ Не вдалося підключитися до HTTP stream")
+            cleanup_rpicam()
+            return None
+            
+    except Exception as e:
+        print(f"❌ Помилка HTTP streaming: {e}")
+        cleanup_rpicam()
+        return None
 
 # ----------------------
 # TFLite Model Class
@@ -264,7 +397,7 @@ def draw_hints(frame, is_gray_mode, width, height, fps=0, detections_count=0):
         ("Press 'r' to reset selection", 10, y + 40),
         ("Press 'g' to toggle gray mode", 10, y + 60),
         ("Press 'c' to switch to camera", 10, y + 80),
-        ("Press '1' to switch to Raspberry Pi camera", 10, y + 100),
+        ("Press '1' to switch to Raspberry Pi camera (libcamera)", 10, y + 100),
         ("Press 'v' to switch to video", 10, y + 120),
         ("Press 'n' for next video", 10, y + 140),
         ("Press 'p' for previous video", 10, y + 160),
@@ -445,7 +578,7 @@ def main():
     print("   g - перемикання в чорно-білий режим")
     print("   r - скидання трекера")
     print("   c - переключення на камеру")
-    print("   1 - переключення на Raspberry Pi камеру")
+    print("   1 - переключення на Raspberry Pi камеру (libcamera)")
     print("   v - переключення на відео")
     print("   n - наступне відео")
     print("   p - попереднє відео")
@@ -523,16 +656,46 @@ def main():
             if not switch_to_camera():
                 print("❌ Не вдалося переключитися на камеру")
                 break
-        elif key == ord('1'):  # Switch to Raspberry Pi camera (GStreamer)
+        elif key == ord('1'):  # Switch to Raspberry Pi camera (libcamera)
             if cap:
                 cap.release()
-            cap = cv.VideoCapture(
-                "v4l2src device=/dev/video0 ! videoconvert ! appsink", cv.CAP_GSTREAMER
-            )
-            is_camera_mode = True
-            print("🔄 Перемикання на Raspberry Pi камеру (GStreamer)")
-            if not cap.isOpened():
+            
+            # Спробуємо різні методи підключення до Raspberry Pi камери
+            pi_camera_methods = [
+                # Метод 1: libcamera через named pipe
+                ("libcamera (rpicam-vid)", lambda: setup_rpicam_pipe()),
+                # Метод 2: HTTP streaming через rpicam-vid
+                ("HTTP streaming (rpicam-vid)", lambda: setup_rpicam_http()),
+                # Метод 3: Спроба через /dev/video0 (якщо доступно)
+                ("/dev/video0", lambda: cv.VideoCapture("/dev/video0")),
+                # Метод 4: Спроба GStreamer (якщо доступний)
+                ("GStreamer v4l2src", lambda: cv.VideoCapture("v4l2src device=/dev/video0 ! videoconvert ! appsink", cv.CAP_GSTREAMER)),
+            ]
+            
+            cap = None
+            for method_name, method_func in pi_camera_methods:
+                try:
+                    print(f"🔄 Спробуємо {method_name}...")
+                    cap = method_func()
+                    if cap and cap.isOpened():
+                        print(f"✅ Raspberry Pi камера підключена через {method_name}")
+                        is_camera_mode = True
+                        break
+                    elif cap:
+                        cap.release()
+                        cap = None
+                except Exception as e:
+                    print(f"⚠️ {method_name} не працює: {e}")
+                    if cap:
+                        cap.release()
+                        cap = None
+            
+            if cap is None:
                 print("❌ Не вдалося відкрити Raspberry Pi камеру")
+                print("💡 Переконайтеся, що:")
+                print("   - Камера підключена та увімкнена")
+                print("   - Виконайте: sudo raspi-config -> Interface Options -> Camera -> Enable")
+                print("   - Перевірте: rpicam-hello -t 2000")
                 # Fallback to regular camera
                 cap, is_camera_mode = open_camera()
                 if cap is None:
@@ -562,6 +725,7 @@ def main():
     if cap:
         cap.release()
     cv.destroyAllWindows()
+    cleanup_rpicam()  # Очищуємо ресурси rpicam
     print("👋 Програма завершена")
 
 if __name__ == "__main__":
